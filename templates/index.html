@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Adaptive Healthcare Monitoring{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 text-center mb-5">
+        <h1 class="display-4">Welcome to Adaptive Healthcare Monitoring</h1>
+        <p class="lead">Real-time health monitoring and analysis for better patient care</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Real-Time Monitoring</h5>
+                <p class="card-text">Monitor vital signs and health metrics in real-time with instant updates and alerts.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Health Trends</h5>
+                <p class="card-text">View and analyze health trends over time with interactive charts and graphs.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Smart Alerts</h5>
+                <p class="card-text">Receive intelligent alerts when health metrics require attention.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6 offset-md-3 text-center">
+        <h3>Get Started</h3>
+        <p>Create an account or login to access your health monitoring dashboard.</p>
+        <div class="d-grid gap-2 d-md-block">
+            <button class="btn btn-primary btn-lg me-md-2" data-bs-toggle="modal" data-bs-target="#signupModal">Sign Up</button>
+            <button class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+        </div>
+        <div class="mt-3">
+            <p class="text-muted">
+                <small>Are you a healthcare provider? <a href="#" data-bs-toggle="modal" data-bs-target="#signupModal" onclick="document.getElementById('signupRole').value='doctor'">Register as a Doctor</a></small>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Check if user is already logged in
+    document.addEventListener('DOMContentLoaded', function() {
+        const user = localStorage.getItem('user');
+        if (user && window.location.pathname === '/') {
+            // Only redirect if we're on the home page and have a user
+            const userData = JSON.parse(user);
+            // Verify the session is still valid
+            fetch('/verify-session')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.valid) {
+                        window.location.href = '/dashboard';
+                    } else {
+                        // If session is invalid, clear localStorage
+                        localStorage.removeItem('user');
+                        updateAuthUI(false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Session verification error:', error);
+                    localStorage.removeItem('user');
+                    updateAuthUI(false);
+                });
+        }
+    });
+</script>
+{% endblock %} 

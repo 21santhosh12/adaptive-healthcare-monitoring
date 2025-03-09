@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Dashboard - Adaptive Healthcare Monitoring{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>Welcome, {{ user.name }}</h2>
+        <p class="text-muted">Your Health Dashboard</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-primary" onclick="requestAppointment()">
+            <i class="bi bi-plus-circle"></i> Request Appointment
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Consultation History -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Consultations</h5>
+            </div>
+            <div class="card-body">
+                <div id="consultationHistory">
+                    <!-- Consultation history will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointments -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Your Appointments</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link active" onclick="loadAppointments('upcoming')" href="#">Upcoming</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" onclick="loadAppointments('past')" href="#">Past</a>
+                    </li>
+                </ul>
+                <div id="appointmentsList">
+                    <!-- Appointments will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Recommendations -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">AI Health Recommendations</h5>
+            </div>
+            <div class="card-body">
+                <div id="aiRecommendations">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <small class="text-muted mt-2" id="recommendationsLastUpdated"></small>
+            </div>
+        </div>
+
+        <!-- Health Trends -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Health Insights</h5>
+            </div>
+            <div class="card-body">
+                <div id="healthTrends">
+                    <div class="text-center">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Request Appointment Modal -->
+<div class="modal fade" id="requestAppointmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Book Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="appointmentBookingForm">
+                    <div class="mb-3">
+                        <label class="form-label">Specialization</label>
+                        <select class="form-select" id="specialization" onchange="loadDoctors()" required>
+                            <option value="">Select Specialization</option>
+                            <option value="general">General Physician</option>
+                            <option value="cardiology">Cardiologist</option>
+                            <option value="orthopedics">Orthopedic</option>
+                            <option value="pediatrics">Pediatrician</option>
+                            <option value="neurology">Neurologist</option>
+                            <option value="dermatology">Dermatologist</option>
+                            <option value="psychiatry">Psychiatrist</option>
+                            <option value="emergency">Emergency Medicine</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Doctor</label>
+                        <select class="form-select" id="doctorSelect" required disabled>
+                            <option value="">Select Doctor</option>
+                        </select>
+                        <small class="text-muted">Only available doctors are shown</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Describe Your Symptoms</label>
+                        <textarea class="form-control" id="symptoms" rows="3" required 
+                            placeholder="Please describe your symptoms in detail to help us prioritize emergency cases."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="bi bi-info-circle"></i> 
+                            Based on your symptoms, you will be automatically assigned the earliest appropriate time slot.
+                        </small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Book Appointment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Appointment Details Modal -->
+<div class="modal fade" id="viewAppointmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Appointment Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="appointmentDetails"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+<style>
+.metric-card {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+.metric-card h6 {
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+.metric-card h3 {
+    color: #0d6efd;
+    margin: 0;
+}
+.appointment-card {
+    border-left: 4px solid #0d6efd;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.appointment-card:hover {
+    transform: translateX(5px);
+}
+.recommendation-item {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+    transition: transform 0.2s;
+}
+.recommendation-item:hover {
+    transform: translateX(5px);
+}
+.trend-item {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    border-left: 3px solid #17a2b8;
+    transition: transform 0.2s;
+}
+.trend-item:hover {
+    transform: translateX(5px);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadConsultationHistory() {
+    fetch(`/patient/consultations/{{ user._id }}`)
+        .then(response => response.json())
+        .then(data => {
+            const historyDiv = document.getElementById('consultationHistory');
+            if (!data.consultations || data.consultations.length === 0) {
+                historyDiv.innerHTML = '<p class="text-muted">No consultation history available.</p>';
+                return;
+            }
+
+            historyDiv.innerHTML = '';
+            data.consultations.forEach(consultation => {
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.innerHTML = `
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Dr. ${consultation.doctor_name}</h6>
+                            <small class="text-muted">${formatDate(consultation.date)}</small>
+                        </div>
+                        <p class="mb-1"><strong>Diagnosis:</strong> ${consultation.diagnosis}</p>
+                        <p class="mb-1"><strong>Prescription:</strong> ${consultation.prescription}</p>
+                        ${consultation.next_appointment ? `
+                            <p class="mb-1"><strong>Next Visit:</strong> ${consultation.next_appointment}</p>
+                        ` : ''}
+                        ${consultation.notes ? `
+                            <p class="mb-0"><strong>Notes:</strong> ${consultation.notes}</p>
+                        ` : ''}
+                    </div>
+                `;
+                historyDiv.appendChild(card);
+            });
+        })
+        .catch(error => console.error('Error loading consultation history:', error));
+}
+
+function loadAIRecommendations() {
+    fetch(`/recommendations/{{ user._id }}`)
+        .then(response => response.json())
+        .then(data => {
+            const recommendationsDiv = document.getElementById('aiRecommendations');
+            const trendsDiv = document.getElementById('healthTrends');
+            
+            // Display recommendations
+            if (data.recommendations && data.recommendations.length > 0) {
+                recommendationsDiv.innerHTML = data.recommendations.map(rec => `
+                    <div class="recommendation-item">
+                        <i class="bi bi-lightbulb text-primary"></i> ${rec}
+                    </div>
+                `).join('');
+            } else {
+                recommendationsDiv.innerHTML = '<p class="text-muted">No recommendations available yet.</p>';
+            }
+            
+            // Display health trends
+            if (data.trends && data.trends.length > 0) {
+                trendsDiv.innerHTML = data.trends.map(trend => `
+                    <div class="trend-item">
+                        <i class="bi bi-graph-up text-info"></i> ${trend}
+                    </div>
+                `).join('');
+            } else {
+                trendsDiv.innerHTML = '<p class="text-muted">No health trends available yet.</p>';
+            }
+            
+            // Update last updated timestamp
+            if (data.last_updated) {
+                document.getElementById('recommendationsLastUpdated').textContent = 
+                    `Last updated: ${data.last_updated}`;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading AI recommendations:', error);
+            document.getElementById('aiRecommendations').innerHTML = 
+                '<p class="text-danger">Failed to load recommendations. Please try again later.</p>';
+            document.getElementById('healthTrends').innerHTML = 
+                '<p class="text-danger">Failed to load health trends. Please try again later.</p>';
+        });
+}
+
+function requestAppointment() {
+    const modal = new bootstrap.Modal(document.getElementById('requestAppointmentModal'));
+    modal.show();
+}
+
+function loadDoctors() {
+    const specialization = document.getElementById('specialization').value;
+    const doctorSelect = document.getElementById('doctorSelect');
+    
+    if (!specialization) {
+        doctorSelect.disabled = true;
+        doctorSelect.innerHTML = '<option value="">Select Doctor</option>';
+        return;
+    }
+    
+    fetch(`/doctors/available?specialization=${specialization}`)
+        .then(response => response.json())
+        .then(doctors => {
+            doctorSelect.innerHTML = '<option value="">Select Doctor</option>';
+            if (doctors.length === 0) {
+                doctorSelect.innerHTML += '<option value="" disabled>No doctors available for this specialization</option>';
+            } else {
+                doctors.forEach(doctor => {
+                    const option = document.createElement('option');
+                    option.value = doctor.id;
+                    option.textContent = `Dr. ${doctor.name} - ${doctor.qualification}`;
+                    doctorSelect.appendChild(option);
+                });
+            }
+            doctorSelect.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error loading doctors:', error);
+            doctorSelect.innerHTML = '<option value="">Error loading doctors</option>';
+            doctorSelect.disabled = true;
+        });
+}
+
+document.getElementById('appointmentBookingForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Booking...';
+    
+    const data = {
+        doctor_id: document.getElementById('doctorSelect').value,
+        patient_id: '{{ user._id }}',
+        symptoms: document.getElementById('symptoms').value
+    };
+    
+    fetch('/appointments/book', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Failed to book appointment');
+            });
+        }
+        return response.json();
+    })
+    .then(result => {
+        // Show success message with appointment time
+        alert(`Appointment booked successfully for ${result.appointment_time}`);
+        
+        // Close modal and refresh appointments
+        const modal = bootstrap.Modal.getInstance(document.getElementById('requestAppointmentModal'));
+        modal.hide();
+        loadAppointments('upcoming');
+    })
+    .catch(error => {
+        console.error('Error booking appointment:', error);
+        alert(error.message);
+    })
+    .finally(() => {
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Book Appointment';
+    });
+});
+
+// Load appointments
+function loadAppointments(type = 'upcoming') {
+    // Update active tab
+    document.querySelectorAll('.nav-tabs .nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    document.querySelector(`.nav-link[onclick="loadAppointments('${type}')"]`).classList.add('active');
+    
+    fetch(`/appointments/patient/{{ user._id }}?type=${type}`)
+        .then(response => response.json())
+        .then(appointments => {
+            displayAppointments(appointments, type);
+        })
+        .catch(error => console.error('Error loading appointments:', error));
+}
+
+function displayAppointments(appointments, type) {
+    const appointmentsList = document.getElementById('appointmentsList');
+    appointmentsList.innerHTML = '';
+    
+    if (!appointments || appointments.length === 0) {
+        appointmentsList.innerHTML = `<p class="text-muted">No ${type} appointments found.</p>`;
+        return;
+    }
+    
+    appointments.forEach(apt => {
+        const card = document.createElement('div');
+        card.className = `card mb-3 appointment-card ${getPriorityClass(apt.priority_level)}`;
+        
+        const priorityBadge = `<span class="badge bg-${getPriorityBadgeClass(apt.priority_level)}">
+            ${getPriorityLabel(apt.priority_level)}
+        </span>`;
+        
+        card.innerHTML = `
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Dr. ${apt.doctor_name}</h6>
+                    <div>
+                        ${priorityBadge}
+                        <span class="badge bg-primary">${apt.time}</span>
+                    </div>
+                </div>
+                <p class="text-muted small mb-2">${apt.symptoms}</p>
+                ${apt.diagnosis ? `
+                    <div class="mt-2">
+                        <small class="text-muted">Diagnosis: ${apt.diagnosis}</small>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        appointmentsList.appendChild(card);
+    });
+}
+
+function getPriorityClass(level) {
+    switch(level) {
+        case 1: return 'border-danger';    // Emergency
+        case 2: return 'border-warning';   // Urgent
+        case 3: return 'border-success';   // Routine
+        default: return 'border-primary';
+    }
+}
+
+function getPriorityBadgeClass(level) {
+    switch(level) {
+        case 1: return 'danger';     // Emergency
+        case 2: return 'warning';    // Urgent
+        case 3: return 'success';    // Routine
+        default: return 'primary';
+    }
+}
+
+function getPriorityLabel(level) {
+    switch(level) {
+        case 1: return 'Emergency';
+        case 2: return 'Urgent';
+        case 3: return 'Routine';
+        default: return 'Normal';
+    }
+}
+
+function showAppointmentDetails(appointment) {
+    const details = document.getElementById('appointmentDetails');
+    details.innerHTML = `
+        <dl class="row">
+            <dt class="col-sm-4">Doctor</dt>
+            <dd class="col-sm-8">Dr. ${appointment.doctor_name}</dd>
+            
+            <dt class="col-sm-4">Specialization</dt>
+            <dd class="col-sm-8">${appointment.doctor_specialization}</dd>
+            
+            <dt class="col-sm-4">Date & Time</dt>
+            <dd class="col-sm-8">${appointment.date} at ${appointment.time}</dd>
+            
+            <dt class="col-sm-4">Status</dt>
+            <dd class="col-sm-8">
+                <span class="badge bg-${getStatusBadgeClass(appointment.status)}">
+                    ${appointment.status}
+                </span>
+            </dd>
+            
+            <dt class="col-sm-4">Symptoms</dt>
+            <dd class="col-sm-8">${appointment.symptoms}</dd>
+            
+            ${appointment.diagnosis ? `
+                <dt class="col-sm-4">Diagnosis</dt>
+                <dd class="col-sm-8">${appointment.diagnosis}</dd>
+            ` : ''}
+            
+            ${appointment.prescription ? `
+                <dt class="col-sm-4">Prescription</dt>
+                <dd class="col-sm-8">${appointment.prescription}</dd>
+            ` : ''}
+            
+            ${appointment.notes ? `
+                <dt class="col-sm-4">Doctor's Notes</dt>
+                <dd class="col-sm-8">${appointment.notes}</dd>
+            ` : ''}
+            
+            ${appointment.completed_at ? `
+                <dt class="col-sm-4">Completed On</dt>
+                <dd class="col-sm-8">${new Date(appointment.completed_at).toLocaleString()}</dd>
+            ` : ''}
+        </dl>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('viewAppointmentModal'));
+    modal.show();
+}
+
+function getStatusBadgeClass(status) {
+    switch(status) {
+        case 'completed': return 'success';
+        case 'scheduled': return 'primary';
+        case 'cancelled': return 'danger';
+        case 'no-show': return 'warning';
+        default: return 'secondary';
+    }
+}
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadConsultationHistory();
+    loadAIRecommendations();
+    loadAppointments('upcoming');
+});
+</script>
+{% endblock %} 
