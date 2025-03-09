@@ -5,8 +5,8 @@ import random
 import string
 
 # Admin credentials
-ADMIN_EMAIL = "santhosh6382572352@gmail.com"
-ADMIN_APP_PASSWORD = "ipao nqap fgyp zkeu"
+ADMIN_EMAIL = "your_mail_id"
+ADMIN_APP_PASSWORD = "app_password"
 
 def generate_otp():
     """Generate a 6-digit OTP"""
