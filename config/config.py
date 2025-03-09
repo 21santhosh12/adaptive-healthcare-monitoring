@@ -2,7 +2,7 @@ from pymongo import MongoClient
 import os
 
 # MongoDB Atlas connection string
-MONGO_URI = "mongodb+srv://santhosh:2002Sk@parkingtokensystem.o4l8l.mongodb.net/?retryWrites=true&w=majority&appName=ParkingTokenSystem"
+MONGO_URI = "your_mongodb_cloud"
 
 # Initialize MongoDB client
 client = MongoClient(MONGO_URI)
